@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>DameCitas</title>
+    <script>
+        function mostrarCitas() {
+            // Eliminar etiquetas HTML después del botón "Dame Citas!"
+            const contenedor = document.querySelector(".container");
+            let nextElement = contenedor.nextElementSibling;
+            while (nextElement) {
+                nextElement.remove();
+                nextElement = contenedor.nextElementSibling;
+            }
+
+            const citas = dameCitas();
+            const citasDepuradas = depuraCitas(citas);
+            const lecturas = organizaCitas(citasDepuradas);
+
+            muestraResumen();
+
+            const table = document.createElement("table");
+            const tbody = document.createElement("tbody");
+
+            const nombresColumnas = ["1ª Lectura", "2ª Lectura", "3ª Lectura", "Evangelio"];
+            const columnas = ["Lectura1", "Lectura2", "Lectura3", "Evangelio"];
+
+            const filaCabecera = document.createElement("tr");
+            const filaContenido = document.createElement("tr");
+
+            for (let i = 0; i < columnas.length; i++) {
+                const columna = columnas[i];
+                const nombreColumna = nombresColumnas[i];
+
+                const celdaCabecera = document.createElement("th");
+                const celdaContenido = document.createElement("td");
+
+                const citasGrupo = lecturas[columna];
+                const contenidoCelda = citasGrupo ? citasGrupo.join("<br>") : "";
+
+                celdaCabecera.textContent = nombreColumna;
+                celdaContenido.innerHTML = contenidoCelda;
+
+                filaCabecera.appendChild(celdaCabecera);
+                filaContenido.appendChild(celdaContenido);
+            }
+
+            tbody.appendChild(filaCabecera);
+            tbody.appendChild(filaContenido);
+
+            table.appendChild(tbody);
+            document.body.appendChild(table);
+
+            muestraGrupoCitas("Salmos", lecturas.Salmos);
+            muestraGrupoCitas("Poéticos, Sapienciales y citas sueltas a revisar", lecturas.Poeticos);
+        }
+
+        function muestraResumen() {
+            const citas = dameCitas();
+            const citasDepuradas = depuraCitas(citas);
+            const lecturas = organizaCitas(citasDepuradas);
+
+            const resumen = document.createElement("ul");
+
+            const tituloCitas = document.createElement("li");
+            tituloCitas.innerHTML = "<strong>Citas:</strong> " + citasDepuradas.length;
+            resumen.appendChild(tituloCitas);
+
+            const grupos = [
+                { nombre: "1ª Lectura", grupo: "Lectura1" },
+                { nombre: "2ª Lectura", grupo: "Lectura2" },
+                { nombre: "3ª Lectura", grupo: "Lectura3" },
+                { nombre: "Evangelio", grupo: "Evangelio" },
+                { nombre: "Salmos", grupo: "Salmos" },
+                { nombre: "<s>Poéticos y Sapienciales</s>", grupo: "Poeticos" }
+            ];
+
+            for (let i = 0; i < grupos.length; i++) {
+                const grupo = grupos[i];
+                const totalGrupo = document.createElement("li");
+                totalGrupo.innerHTML = "<strong>" + grupo.nombre + ":</strong> " + lecturas[grupo.grupo].length;
+                resumen.appendChild(totalGrupo);
+            }
+
+            document.body.appendChild(resumen);
+        }
+
+        function muestraGrupoCitas(titulo, grupo) {
+            const tituloGrupo = document.createElement("h4");
+            tituloGrupo.textContent = titulo;
+            document.body.appendChild(tituloGrupo);
+
+            const listaCitas = document.createElement("ul");
+            grupo.forEach((cita) => {
+                const itemCita = document.createElement("li");
+                itemCita.textContent = cita;
+                listaCitas.appendChild(itemCita);
+            });
+
+            document.body.appendChild(listaCitas);
+        }
+
+        function dameCitas() {
+            const htmlTextArea = document.getElementsByName("htmlOrigen")[0];
+            const html = htmlTextArea.value;
+
+            const regex = /<cite>(.*?)<\/cite>/g;
+            const citas = [];
+            let match;
+
+            while ((match = regex.exec(html)) !== null) {
+                citas.push(match[1]);
+            }
+
+            return citas;
+        }
+
+        function depuraCitas(citas) {
+            const citasDepuradas = [];
+
+            let abreviaturaAnterior = "";
+            for (let i = 0; i < citas.length; i++) {
+                const citaActual = citas[i];
+                if (!/[A-Za-z]/.test(citaActual.substr(0, 4))) {
+                    citasDepuradas.push(`${abreviaturaAnterior} ${citaActual}`);
+                } else {
+                    citasDepuradas.push(citaActual);
+                    abreviaturaAnterior = obtenerAbreviatura(citaActual);
+                }
+            }
+
+            const citasDepuradasSinDuplicados = eliminarDuplicados(citasDepuradas);
+            return citasDepuradasSinDuplicados;
+        }
+
+        function obtenerAbreviatura(cita) {
+            const palabras = cita.split(" ");
+            let abreviatura = "";
+            if (palabras.length > 1) {
+                const primeraPalabra = palabras[0];
+                const matches = primeraPalabra.match(/^(\d?[A-Za-z]{2,4})$/);
+                if (matches) {
+                    abreviatura = matches[1];
+                }
+            }
+            return abreviatura;
+        }
+
+        function eliminarDuplicados(citas) {
+            const citasSinDuplicados = [...new Set(citas)];
+            return citasSinDuplicados;
+        }
+        
+        function organizaCitas(citasDepuradas) {
+            const lecturas = {
+                Lectura1: [],
+                Lectura2: [],
+                Lectura3: [],
+                Evangelio: [],
+                Salmos: [],
+                Poeticos: []
+            };
+
+            const regexLectura1 = /^(Gen|Ex|Lev|Num|Dt|Jos|Jue|Rt|1Sa|2Sa|1Re|2Re|1Cro|2Cro|Es|Neh|Tob|Jdt|Est|1Mac|2Mac)/;
+            const regexLectura2 = /^(Is|Jer|Lam|Bar|Ez|Dan|Os|Jl|Am|Abd|Jon|Miq|Nah|Hab|Sof|Hag|Zac|Mal)/;
+            const regexLectura3 = /^(Act|Rom|Rm|1Cor|2Cor|Gal|Ef|Flp|Col|1Tes|2Tes|1Tim|2Tim|Tit|Flm|Heb|Sant|1Pe|2Pe|1Jn|2Jn|3Jn|Jud|Ap)/;
+            const regexEvangelio = /^(Mt|Mc|Lc|Jn)/;
+            const regexSalmos = /^(Sal)/;
+
+            for (let i = 0; i < citasDepuradas.length; i++) {
+                const cita = citasDepuradas[i];
+                if (regexLectura1.test(cita)) {
+                lecturas.Lectura1.push(cita);
+                } else if (regexLectura2.test(cita)) {
+                lecturas.Lectura2.push(cita);
+                } else if (regexLectura3.test(cita)) {
+                lecturas.Lectura3.push(cita);
+                } else if (regexEvangelio.test(cita)) {
+                lecturas.Evangelio.push(cita);
+                } else if (regexSalmos.test(cita)) {
+                lecturas.Salmos.push(cita);
+                } else {
+                lecturas.Poeticos.push(cita);
+                }
+            }
+
+            const gruposOrdenados = ordenarGrupos(lecturas);
+
+            return gruposOrdenados;
+        }
+
+        function ordenarGrupos(lecturas) {
+            const gruposOrdenados = {};
+
+            for (let grupo in lecturas) {
+                gruposOrdenados[grupo] = lecturas[grupo].sort();
+            }
+
+            return gruposOrdenados;
+        }
+
+        function vaciarTextarea() {
+            var textarea = document.getElementsByName("htmlOrigen")[0];
+            textarea.value = "";
+        }
+
+    </script>
+    <style>
+
+        body{
+            font-family: Arial, 'Courier New', Courier, monospace;
+            padding: 10px;
+        }
+        
+        table{
+            border-collapse: collapse;
+        }
+        th{
+            border:1px solid black;
+            padding: 5px 40px 5px 40px;
+        }
+        td{
+            padding: 5px;
+            border:1px solid black;
+            vertical-align: top;
+        }
+        textarea{
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0 auto;
+            display: block;
+            background-color: rgb(231, 247, 231);
+            border-radius: 5px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        textarea::placeholder{
+            font-size: 2.5rem;
+            text-align: center;
+            vertical-align: bottom;
+            color: rgb(168, 192, 168);
+        }
+        iframe{
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0 auto;
+            display: block;
+            height: 500px;
+            border-radius: 5px;
+            border-bottom: 2px solid grey;
+            padding: 5px 3px 5px 3px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+        .container {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            column-gap: 15px;
+            margin-bottom: 20px;
+        }      
+        button {
+            padding: 20px 10px;
+            font-size: 18px;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 30px;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+       
+        
+        #resetHTML {
+            flex-grow: 0.5;
+            background-color: rgb(204, 68, 68);
+        }
+        #resetHTML:hover {
+            background-color: rgb(150, 26, 26);
+        }
+        #resetHTML {
+            flex-grow: 0.5;
+            background-color: rgb(204, 68, 68);
+        }
+        #dameCitas {
+            flex-grow: 10;
+            background-color: green;
+        }
+        #dameCitas:hover {
+            background-color: darkgreen;
+        }
+        #dameCitas:active {
+            background-color: limegreen;
+        }
+
+    </style>
+</head>
+<body>
+    <!--<h1>DameCitas</h1>-->
+    <iframe id="iframePalabras" src="https://hjg.com.ar/vocbib/">"No es posible visualizar el contenido"</iframe>
+    <ol>
+        <li>Web original: <a href="https://hjg.com.ar/vocbib/" target="_blank">https://hjg.com.ar/vocbib/</a></li>
+        <li>Selecciona la palabra deseada</li>
+        <li>Clic derecho en cualquier parte del marco de la palabra → Ver fuente del marco (puede variar según el navegador)</li>
+        <li>Copia todo el código HTML y pégalo aquí:</li>
+        *El orden de las citas no es del todo correcto y pueden haber otros errores. Conviene revisar las incongruencias y citas sueltas.
+    </ol>
+    <textarea name="htmlOrigen" rows="10" placeholder="Código HTML"></textarea><br>
+    <div class="container">
+        <button onclick="vaciarTextarea()" id="resetHTML"><b>↻</b></button>
+        <button onclick="mostrarCitas()" id="dameCitas"><b>➤</b> Dame citas</button>
+    </div>
+    
+
+</body>
+</html>
